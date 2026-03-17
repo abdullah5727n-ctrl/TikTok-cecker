@@ -5,7 +5,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 # ===============================
 # ✅ قراءة المتغيرات من البيئة (Render Environment Variables)
-TOKEN = os.environ.get("TOKEN", "PUT_TOKEN")
+TOKEN = os.environ.get("TOKEN", "8723464858:AAEVoU_oBDP-6WXQYU6ZbcFajjoXD0lObWA")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "6890999007"))
 
 USERS_FILE = "users.json"
