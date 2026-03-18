@@ -6,7 +6,7 @@ from datetime import datetime
 # ===============================
 # CONFIGURATION
 # ===============================
-TOKEN = os.environ.get("TOKEN", "8682364291:AAF8asDDorrPZL9gzCnL_Rzh8pH0g_JpDnQ")
+TOKEN = os.environ.get("TOKEN", "8682364291:AAEGU7nfBSVVjmvcWoejjm13fsiHKdQp7h8")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "6890999007"))
 
 USERS_FILE = "users.json"
@@ -55,12 +55,11 @@ class AI:
             try:
                 with open(AI_FILE, "r") as f:
                     data = json.load(f)
-                    # Only update if data has correct structure
                     for key in self.patterns:
                         if key in data and "type" in data[key]:
                             self.patterns[key].update(data[key])
             except:
-                pass  # Use defaults if file is corrupted
+                pass
 
     def save(self):
         with open(AI_FILE, "w") as f:
@@ -101,7 +100,6 @@ class AI:
         self.save()
 
     def get_stats(self):
-        # Safe method that handles missing keys
         result = {}
         for p, d in self.patterns.items():
             result[p] = {
@@ -307,12 +305,19 @@ def rarity(username):
 async def check(session, username):
     try:
         async with session.get(f"https://www.tiktok.com/@{username}", timeout=10) as r:
-            return r.status == 404
-    except:
+            if r.status == 404:
+                return True
+            elif r.status == 200:
+                return False
+            else:
+                return None
+    except asyncio.TimeoutError:
+        return None
+    except Exception as e:
         return None
 
 # ===============================
-# WORKER
+# WORKER - المصلح
 # ===============================
 async def worker():
     async with aiohttp.ClientSession() as session:
@@ -323,12 +328,14 @@ async def worker():
 
                 stats.checked += 1
 
-                available = await check(session, username)
+                is_available = await check(session, username)
 
-                if available:
+                if is_available is True:
                     rare_type, score, t = rarity(username)
                     is_rare = score >= 2
 
+                    ai.reward(pattern)
+                    
                     if not settings.only_rare or is_rare:
                         if is_rare:
                             stats.rare_found += 1
@@ -348,16 +355,19 @@ async def worker():
                         with open(HITS_FILE, "a") as f:
                             f.write(f"{username} | {rare_type} | {pattern} | {t}\n")
 
-                        ai.reward(pattern)
                         stats.found += 1
-                    else:
-                        ai.punish(pattern)
-                else:
+                        print(f"✅ FOUND: @{username} | {rare_type}")
+                
+                elif is_available is False:
                     ai.punish(pattern)
+                
+                else:
+                    pass
 
                 await asyncio.sleep(speed.get_delay())
 
             except Exception as e:
+                print(f"Error: {e}")
                 await asyncio.sleep(1)
 
 async def main_loop():
@@ -637,363 +647,4 @@ body {
     font-size: 0.8em;
 }
 
-.type-3 { background: linear-gradient(135deg, #ff6b6b, #ee5a5a); }
-.type-4 { background: linear-gradient(135deg, #4ecdc4, #44a08d); }
-.type-34 { background: linear-gradient(135deg, #a8edea, #fed6e3); color: #333; }
-.type-under { background: linear-gradient(135deg, var(--orange), var(--gold)); color: #000; }
-
-.ai-info { flex: 1; }
-.ai-name { font-weight: 700; margin-bottom: 5px; }
-.ai-bar {
-    height: 6px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 3px;
-    overflow: hidden;
-}
-
-.ai-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--orange), var(--gold));
-    border-radius: 3px;
-    transition: width 0.5s;
-}
-
-.ai-stats {
-    font-size: 0.8em;
-    color: #888;
-    margin-top: 5px;
-}
-
-.hits-section {
-    background: linear-gradient(145deg, var(--dark), var(--gray));
-    border-radius: 20px;
-    padding: 25px;
-    border: 1px solid rgba(255,107,0,0.2);
-}
-
-.hits-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.hits-title {
-    color: var(--orange);
-    font-size: 1.3em;
-    font-weight: 700;
-}
-
-.hit-count {
-    background: var(--orange);
-    color: #000;
-    padding: 5px 15px;
-    border-radius: 20px;
-    font-weight: 700;
-}
-
-.hits-grid {
-    display: grid;
-    gap: 10px;
-}
-
-.hit-card {
-    background: rgba(0,0,0,0.3);
-    padding: 15px 20px;
-    border-radius: 15px;
-    display: grid;
-    grid-template-columns: 1fr auto auto auto;
-    gap: 20px;
-    align-items: center;
-    border-right: 4px solid var(--orange);
-    transition: all 0.3s;
-}
-
-.hit-card:hover {
-    background: rgba(255,107,0,0.1);
-    transform: translateX(-5px);
-}
-
-.hit-username {
-    font-family: 'Courier New', monospace;
-    font-size: 1.3em;
-    font-weight: 700;
-}
-
-.hit-username.under {
-    color: var(--orange);
-    text-shadow: 0 0 10px rgba(255,107,0,0.3);
-}
-
-.hit-username.rare {
-    color: var(--gold);
-    text-shadow: 0 0 10px rgba(255,215,0,0.3);
-}
-
-.hit-type {
-    background: rgba(255,107,0,0.2);
-    color: var(--orange);
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-size: 0.8em;
-    font-weight: 700;
-}
-
-.hit-rarity {
-    color: #888;
-    font-size: 0.9em;
-}
-
-.hit-time {
-    color: #666;
-    font-size: 0.8em;
-}
-
-.features {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    margin-top: 30px;
-}
-
-.feature {
-    background: linear-gradient(145deg, rgba(255,107,0,0.1), rgba(255,107,0,0.05));
-    padding: 20px;
-    border-radius: 15px;
-    border: 1px solid rgba(255,107,0,0.2);
-    text-align: center;
-}
-
-.feature-icon {
-    font-size: 2em;
-    margin-bottom: 10px;
-}
-
-.feature-text {
-    color: #aaa;
-    font-size: 0.9em;
-}
-
-::-webkit-scrollbar {
-    width: 10px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--dark);
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--orange);
-    border-radius: 5px;
-}
-
-@media (max-width: 768px) {
-    .logo { font-size: 2em; }
-    .stat-value { font-size: 2em; }
-    .hit-card {
-        grid-template-columns: 1fr;
-        gap: 10px;
-    }
-}
-</style>
-</head>
-<body>
-<div class="container">
-
-<div class="header">
-    <div class="logo">AI TIKTOK CHECKER</div>
-    <div class="tagline">ثلاثي + رباعي + شبه ثلاثي + underscore | نظام متعلم</div>
-</div>
-
-<div class="status-bar">
-    <div class="status-pill {{ 'status-running' if run else 'status-stopped' }}">
-        <span>{{ 'ON' if run else 'OFF' }}</span>
-        <span>{{ 'شغال' if run else 'متوقف' }}</span>
-    </div>
-</div>
-
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-value">{{ c }}</div>
-        <div class="stat-label">تم الفحص</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value">{{ f }}</div>
-        <div class="stat-label">المتاح</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value">{{ rf }}</div>
-        <div class="stat-label">النادر</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value">{{ rpm }}</div>
-        <div class="stat-label">فحص/دقيقة</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value">{{ up }}</div>
-        <div class="stat-label">الوقت</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value">{{ total_results }}</div>
-        <div class="stat-label">إجمالي النتائج</div>
-    </div>
-</div>
-
-<div class="settings-panel">
-    <div class="panel-title">إعدادات البحث</div>
-
-    <div class="setting-group">
-        <div class="setting-label">نوع اليوزر:</div>
-        <div class="setting-buttons">
-            <a href="/set/mode/3" class="setting-btn {{ 'active' if m == '3' else 'inactive' }}">ثلاثي</a>
-            <a href="/set/mode/4" class="setting-btn {{ 'active' if m == '4' else 'inactive' }}">رباعي</a>
-            <a href="/set/mode/34" class="setting-btn {{ 'active' if m == '34' else 'inactive' }}">شبه ثلاثي</a>
-            <a href="/set/mode/all" class="setting-btn {{ 'active' if m == 'all' else 'inactive' }}">الكل</a>
-        </div>
-    </div>
-
-    <div class="setting-group">
-        <div class="setting-label">Underscore (z_jd):</div>
-        <div class="setting-buttons">
-            <a href="/set/under/on" class="setting-btn {{ 'active' if u else 'inactive' }}">مفعل</a>
-            <a href="/set/under/off" class="setting-btn {{ 'active' if not u else 'inactive' }}">معطل</a>
-        </div>
-    </div>
-
-    <div class="setting-group">
-        <div class="setting-label">الفلتر:</div>
-        <div class="setting-buttons">
-            <a href="/set/rare/on" class="setting-btn {{ 'active' if r else 'inactive' }}">نادر فقط</a>
-            <a href="/set/rare/off" class="setting-btn {{ 'active' if not r else 'inactive' }}">الكل</a>
-        </div>
-    </div>
-</div>
-
-<div class="controls">
-    <a href="/start"><button class="control-btn btn-start">ابدأ الصيد</button></a>
-    <a href="/stop"><button class="control-btn btn-stop">إيقاف</button></a>
-    <a href="/speed/fast"><button class="control-btn btn-speed">سريع</button></a>
-    <a href="/speed/normal"><button class="control-btn btn-speed">عادي</button></a>
-    <a href="/speed/slow"><button class="control-btn btn-speed">بطيء</button></a>
-</div>
-
-<div class="ai-panel">
-    <div class="panel-title">ذكاء AI - تعلم الأنماط</div>
-    <div class="ai-grid">
-        {% for p, d in ai.items() %}
-        <div class="ai-item">
-            <div class="ai-type type-{{ d.type }}">{{ d.type }}</div>
-            <div class="ai-info">
-                <div class="ai-name">{{ p }}</div>
-                <div class="ai-bar"><div class="ai-fill" style="width: {{ (d.weight / 2) * 100 }}%"></div></div>
-                <div class="ai-stats">Weight: {{ d.weight }} | Success: {{ d.success }} | Fail: {{ d.fail }}</div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-
-<div class="hits-section">
-    <div class="hits-header">
-        <div class="hits-title">النتائج</div>
-        <div class="hit-count">{{ hits|length }}</div>
-    </div>
-    <div class="hits-grid">
-        {% for hit in hits[-20:]|reverse %}
-        <div class="hit-card">
-            <div class="hit-username {{ 'under' if hit.type == 'under' else 'rare' if hit.score >= 3 else '' }}">@{{ hit.username }}</div>
-            <div class="hit-type">{{ hit.type }}</div>
-            <div class="hit-rarity">{{ hit.rarity }}</div>
-            <div class="hit-time">{{ hit.time.split('T')[1][:8] if 'T' in hit.time else hit.time }}</div>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-
-<div class="features">
-    <div class="feature">
-        <div class="feature-icon">🧠</div>
-        <div class="feature-text">نظام AI متعلم</div>
-    </div>
-    <div class="feature">
-        <div class="feature-icon">⚡</div>
-        <div class="feature-text">فحص سريع متعدد</div>
-    </div>
-    <div class="feature">
-        <div class="feature-icon">🎯</div>
-        <div class="feature-text">توليد ذكي لليوزرات</div>
-    </div>
-    <div class="feature">
-        <div class="feature-icon">💾</div>
-        <div class="feature-text">حفظ تلقائي للنتائج</div>
-    </div>
-</div>
-
-</div>
-</body>
-</html>
-"""
-
-@app.route("/")
-def index():
-    try:
-        total = sum(stats.type_counts.values())
-    except:
-        total = 0
-
-    return render_template_string(HTML, 
-        run=stats.running,
-        c=stats.checked,
-        f=stats.found,
-        rf=stats.rare_found,
-        rpm=stats.get_rpm(),
-        up=stats.get_uptime(),
-        total_results=total,
-        m=settings.mode,
-        u=settings.use_underscore,
-        r=settings.only_rare,
-        ai=ai.get_stats(),
-        hits=stats.hits
-    )
-
-@app.route("/start")
-def start():
-    if not stats.running:
-        stats.start()
-        threading.Thread(target=lambda: asyncio.run(main_loop()), daemon=True).start()
-    return redirect("/")
-
-@app.route("/stop")
-def stop():
-    stats.stop()
-    return redirect("/")
-
-@app.route("/set/mode/<mode>")
-def set_mode(mode):
-    settings.set_mode(mode)
-    return redirect("/")
-
-@app.route("/set/under/<state>")
-def set_under(state):
-    if state == "on":
-        settings.use_underscore = True
-    else:
-        settings.use_underscore = False
-    return redirect("/")
-
-@app.route("/set/rare/<state>")
-def set_rare(state):
-    if state == "on":
-        settings.only_rare = True
-    else:
-        settings.only_rare = False
-    return redirect("/")
-
-@app.route("/speed/<mode>")
-def set_speed(mode):
-    speed.set_speed(mode)
-    return redirect("/")
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port, debug=True)
+.type-3 { background: linear-gradient(135deg
